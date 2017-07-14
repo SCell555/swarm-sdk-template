@@ -759,6 +759,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 	bool bBump2 = vars.m_bWorldVertexTransition && vars.m_bBump && vars.m_nBumpmap2Var != -1 && params[vars.m_nBumpmap2Var]->IsTexture();
 	bool bSeamless = vars.m_fSeamlessScale != 0.0;
 	bool bDetail = vars.m_bLightmappedGeneric && (vars.m_nDetailVar != -1) && params[vars.m_nDetailVar]->IsDefined() && (vars.m_nDetailScale != -1);
+	bool bParallaxMapping = vars.m_bLightmappedGeneric && vars.m_bParallaxMapping && vars.m_nParallaxHeightScale != -1 && ( !bBump2 || vars.m_nParallaxHeightScale2 != -1);
 
 	int nDetailBlendMode = 0;
 	if ( bDetail )
@@ -840,6 +841,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 				SET_STATIC_VERTEX_SHADER_COMBO( NORMALMAP, vars.m_bBump );
 				SET_STATIC_VERTEX_SHADER_COMBO( SEAMLESS, bSeamless );
 				SET_STATIC_VERTEX_SHADER_COMBO( DETAIL, bDetail );
+				SET_STATIC_VERTEX_SHADER_COMBO( PARALLAX_MAPPING, bParallaxMapping );
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_flashlight_vs30 );
 			}
 			else
@@ -850,6 +852,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 				SET_STATIC_VERTEX_SHADER_COMBO( NORMALMAP, vars.m_bBump );
 				SET_STATIC_VERTEX_SHADER_COMBO( SEAMLESS, bSeamless );
 				SET_STATIC_VERTEX_SHADER_COMBO( DETAIL, bDetail );
+				SET_STATIC_VERTEX_SHADER_COMBO( PARALLAX_MAPPING, bParallaxMapping );
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_flashlight_vs20 );
 			}
 
@@ -899,6 +902,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 			SET_STATIC_PIXEL_SHADER_COMBO( DETAILTEXTURE, bDetail );
 			SET_STATIC_PIXEL_SHADER_COMBO( DETAIL_BLEND_MODE, nDetailBlendMode );
 			SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode );
+			SET_STATIC_PIXEL_SHADER_COMBO( PARALLAX_MAPPING, bParallaxMapping );
 			SET_STATIC_PIXEL_SHADER( flashlight_ps30 );
 		}
 		else
@@ -915,6 +919,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 			SET_STATIC_PIXEL_SHADER_COMBO( DETAILTEXTURE, bDetail );
 			SET_STATIC_PIXEL_SHADER_COMBO( DETAIL_BLEND_MODE, nDetailBlendMode );
 			SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode );
+			SET_STATIC_PIXEL_SHADER_COMBO( PARALLAX_MAPPING, bParallaxMapping );
 			SET_STATIC_PIXEL_SHADER( flashlight_ps20b );
 		}
 		else
@@ -1046,6 +1051,12 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 				}
 
 				pShaderAPI->SetPixelShaderConstant( 0, vDetailConstants, 1 );
+			}
+			
+			if ( bParallaxMapping )
+			{
+				float vParallaxHeights[4] = { GetFloatParam( vars.m_nParallaxHeightScale, params ), vars.m_bWorldVertexTransition && bBump2 ? GetFloatParam( vars.m_nParallaxHeightScale2, params ) : 0 };
+				pShaderAPI->SetPixelShaderConstant( 20, vParallaxHeights );
 			}
 		}
 		else

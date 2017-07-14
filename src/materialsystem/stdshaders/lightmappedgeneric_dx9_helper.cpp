@@ -346,15 +346,10 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			(info.m_nBlendModulateTexture != -1) &&
 			(params[info.m_nBlendModulateTexture]->IsTexture() );
 		bool hasNormalMapAlphaEnvmapMask = g_pConfig->UseSpecular() && IS_FLAG_SET( MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK );
+		bool bParallaxMapping = g_pConfig->HasParallaxMapping() && ( info.m_nParallaxMap != -1 ) && ( params[info.m_nParallaxMap]->GetIntValue() != 0 ) &&
+			hasBump && ( !hasBaseTexture2 || hasBump2 );
 
-		bool bParallaxMapping = false;
-		// L4D: no parallax mapping
-		/*
-		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
-			bParallaxMapping = ( info.m_nParallaxMap != -1 ) && ( params[info.m_nParallaxMap]->GetIntValue() != 0 );
-		*/
-
-		if ( hasFlashlight && !IsX360() )				
+		if ( hasFlashlight && !IsX360() )			
 		{
 			// !!speed!! do this in the caller so we don't build struct every time
 			CBaseVSShader::DrawFlashlight_dx90_Vars_t vars;
@@ -378,6 +373,9 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			vars.m_nDetailTextureCombineMode = info.m_nDetailTextureCombineMode;
 			vars.m_nDetailTextureBlendFactor = info.m_nDetailTextureBlendFactor;
 			vars.m_nDetailTint = info.m_nDetailTint;
+			vars.m_bParallaxMapping = bParallaxMapping;
+			vars.m_nParallaxHeightScale = info.m_nHeightScale;
+			vars.m_nParallaxHeightScale2 = info.m_nHeightScale2;
 
 			if ( ( info.m_nSeamlessMappingScale != -1 ) )
 				vars.m_fSeamlessScale = params[info.m_nSeamlessMappingScale]->GetFloatValue();
@@ -685,7 +683,6 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 					SET_STATIC_PIXEL_SHADER_COMBO( OUTLINE, bHasOutline );
 					SET_STATIC_PIXEL_SHADER_COMBO( SOFTEDGES, bHasSoftEdges );
 					SET_STATIC_PIXEL_SHADER_COMBO( DETAIL_BLEND_MODE, nDetailBlendMode );
-					SET_STATIC_PIXEL_SHADER_COMBO( PARALLAX_MAPPING, bParallaxMapping );
 					SET_STATIC_PIXEL_SHADER_COMBO( SHADER_SRGB_READ, bShaderSrgbRead );
 					SET_STATIC_PIXEL_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode );
 					SET_STATIC_PIXEL_SHADER( lightmappedgeneric_ps20 );
@@ -862,7 +859,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			// parallax and cubemap light scale mapping parms (c20)
 			if ( bParallaxMapping || (envmap_variant == 2) )
 			{
-				pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant4( 20, GetFloatParam( info.m_nHeightScale, params), GetFloatParam( info.m_nEnvMapLightScale, params), 0, 0 );
+				pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant4( 20, GetFloatParam( info.m_nHeightScale, params), GetFloatParam( info.m_nHeightScale2, params), GetFloatParam( info.m_nEnvMapLightScale, params), 0 );
 			}
 
 			// texture binds

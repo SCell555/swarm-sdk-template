@@ -8,6 +8,9 @@
 //  STATIC: "WORLDVERTEXTRANSITION" "0..1"
 //  STATIC: "SEAMLESS"				"0..1"
 //  STATIC: "DETAIL"				"0..1"
+//  STATIC: "PARALLAX_MAPPING"		"0..1"
+
+// SKIP: !$NORMALMAP && $PARALLAX_MAPPING
 
 #include "common_fog_vs_supportsvertexfog_fxc.h"
 #include "common_vs_fxc.h"
@@ -22,6 +25,10 @@ const float4 SeamlessScale : register( SHADER_SPECIFIC_CONST_6 );
 #endif
 const float4 cBaseTexCoordTransform[2]					:  register( SHADER_SPECIFIC_CONST_6 );
 const float4 cNormalMapOrDetailTexCoordTransform[2]		:  register( SHADER_SPECIFIC_CONST_8 );
+
+#if PARALLAX_MAPPING
+const float3 g_EyePos									:  register( SHADER_SPECIFIC_CONST_10 );
+#endif
 
 static const int g_FogType					= DOWATERFOG;
 
@@ -55,7 +62,10 @@ struct VS_OUTPUT
 	float2 baseTexCoord				: TEXCOORD1;
 #endif
 
-#if NORMALMAP
+#if PARALLAX_MAPPING
+	float4 tangentPosToLightVector	: TEXCOORD2;
+	float4 normalMapTexCoord		: TEXCOORD3;
+#elif NORMALMAP
 	float3 tangentPosToLightVector	: TEXCOORD2;
 	float2 normalMapTexCoord		: TEXCOORD3;
 #else
@@ -153,11 +163,18 @@ VS_OUTPUT main( const VS_INPUT v )
 #else
 
 #if SEAMLESS
-	o.normalMapTexCoord = v.vBaseTexCoord;
+	o.normalMapTexCoord.xy = v.vBaseTexCoord;
 #else
-	o.normalMapTexCoord = o.baseTexCoord;
+	o.normalMapTexCoord.xy = o.baseTexCoord;
 #endif
 
+#endif
+
+#if PARALLAX_MAPPING
+	float3 worldPosToEyeVector = g_EyePos - worldPos;
+	o.tangentPosToLightVector.w = dot( worldPosToEyeVector, worldTangentS );
+	o.normalMapTexCoord.z = dot( worldPosToEyeVector, worldTangentT );
+	o.normalMapTexCoord.w = dot( worldPosToEyeVector, worldNormal );
 #endif
 
 	o.tangentPosToLightVector.x = dot( worldPosToLightVector, worldTangentS );

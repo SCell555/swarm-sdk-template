@@ -13,6 +13,7 @@
 // STATIC: "WORLDVERTEXTRANSITION"		"0..1"
 // STATIC: "SEAMLESS"               	"0..1"
 // STATIC: "DETAILTEXTURE"             	"0..1"
+// STATIC: "PARALLAX_MAPPING"           "0..1"	[ps20b] [ps30]
 // STATIC: "DETAIL_BLEND_MODE"			"0..11"
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps20b] [ps30] [PC]
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [XBOX]
@@ -23,6 +24,7 @@
 // SKIP: !$WORLDVERTEXTRANSITION && $NORMALMAP2
 // SKIP: !$NORMALMAP && $NORMALMAP2
 // SKIP: !$DETAILTEXTURE && ( $DETAIL_BLEND_MODE != 0 )
+// SKIP: !$NORMALMAP && $PARALLAX_MAPPING
 
 #include "common_fog_ps_supportsvertexfog_fxc.h"
 #include "shader_constant_register_map.h"
@@ -73,6 +75,12 @@ sampler RandomRotationSampler				: register( s5 );	//  Random rotation sampler
 sampler FlashlightDepthSampler				: register( s7 );
 #endif
 
+#if PARALLAX_MAPPING
+const float4 g_ParallaxMappingControl : register( c20 );
+#define HEIGHT_SCALE ( g_ParallaxMappingControl.x )
+#define HEIGHT_SCALE2 ( g_ParallaxMappingControl.y )
+#endif
+
 struct PS_INPUT
 {
 	float4 spotTexCoord						: TEXCOORD0;
@@ -81,7 +89,10 @@ struct PS_INPUT
 #else
 	float2 baseTexCoord						: TEXCOORD1;
 #endif
-#if NORMALMAP
+#if PARALLAX_MAPPING
+	float4 tangentPosToLightVector			: TEXCOORD2;
+	float4 normalMapTexCoord				: TEXCOORD3;
+#elif NORMALMAP
 	float3 tangentPosToLightVector			: TEXCOORD2;
 	float2 normalMapTexCoord				: TEXCOORD3;
 #else
@@ -178,8 +189,32 @@ float4 main( PS_INPUT i ) : COLOR
 	#endif
 #endif
 
+	float2 baseTexCoords2 = baseTexCoords.xy;
+
+#if PARALLAX_MAPPING
+	{
+		float3 tangentspace_eye_vector = float3( i.tangentPosToLightVector.w, i.normalMapTexCoord.zw );
+		
+		float flParallaxLimit = length( tangentspace_eye_vector.xy ) / tangentspace_eye_vector.z;
+		float2 vOffset = normalize( -tangentspace_eye_vector.xy );
+		float CurHeight = 1.0;
+		float NewHeight = tex2D( BumpMapSampler, baseTexCoords.xy ).a;
+		float dist = min( 0.06, HEIGHT_SCALE * flParallaxLimit * ( CurHeight - NewHeight ) );
+		
+		#if BASETEXTURE2 && BUMPMAP2
+			float NewHeight2 = tex2D( NormalMap2Sampler, baseTexCoords.xy ).a;
+			float dist2 = min( 0.06, HEIGHT_SCALE2 * flParallaxLimit * ( CurHeight - NewHeight ) );
+			coords2.x += dist2 * vOffset.x;
+			coords2.y += dist2 * vOffset.y;
+		#endif
+		
+		baseTexCoords.x += dist * vOffset.x;
+		baseTexCoords.y += dist * vOffset.y;
+	}
+#endif
+
 	GetBaseTextureAndNormal( BaseTextureSampler, BaseTextureSampler2, BumpMapSampler, bBase2, bBump,
-							 baseTexCoords, normalTexCoords, i.vNormalSqr.xyz, baseColor, baseColor2, vNormal );
+							 baseTexCoords, baseTexCoords2, normalTexCoords, i.vNormalSqr.xyz, baseColor, baseColor2, vNormal );
 
 #if DETAILTEXTURE
 	float4 detailColor = float4( g_DetailConstants.xyz, 1.0f ) * tex2D( DetailSampler, i.detailCoords );
@@ -204,7 +239,6 @@ float4 main( PS_INPUT i ) : COLOR
 // ssbump
 #if ( NORMALMAP == 2 )
 
-	
 #	if NORMALMAP2
 	float3 normal2 = SampleNormal( NormalMap2Sampler, i );
 	vNormal.xyz = lerp( normal2, vNormal.xyz, lerpAlpha );
@@ -259,12 +293,12 @@ float4 main( PS_INPUT i ) : COLOR
 
 #if NORMALMAP == 1
 	// flashlightfixme: wrap this!
-	float3 tangentPosToLightVector = texCUBE( NormalizingCubemapSampler, i.tangentPosToLightVector ) * 2.0f - 1.0f;
+	float3 tangentPosToLightVector = texCUBE( NormalizingCubemapSampler, i.tangentPosToLightVector.xyz ) * 2.0f - 1.0f;
 	float nDotL = dot( tangentPosToLightVector, vNormal.xyz );
 #endif
 
 #if NORMALMAP == 2
-	float3 tangentPosToLightVector = normalize( i.tangentPosToLightVector );
+	float3 tangentPosToLightVector = normalize( i.tangentPosToLightVector.xyz );
 
 	float nDotL = 
 		vNormal.x*dot( tangentPosToLightVector, bumpBasis[0]) +

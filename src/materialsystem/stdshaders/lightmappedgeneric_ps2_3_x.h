@@ -110,12 +110,13 @@ const float4 g_ParallaxMappingControl : register( c20 );
 
 #if PARALLAX_MAPPING
 #define HEIGHT_SCALE ( g_ParallaxMappingControl.x )
+#define HEIGHT_SCALE2 ( g_ParallaxMappingControl.y )
 #else
 #define HEIGHT_SCALE 0
 #endif
 
 #if (CUBEMAP == 2)
-#define g_DiffuseCubemapScale g_ParallaxMappingControl.y
+#define g_DiffuseCubemapScale g_ParallaxMappingControl.z
 #endif
 
 const float3 g_TintValuesWithoutLightmapScale	: register( c21 );
@@ -205,8 +206,9 @@ float4 main( PS_INPUT i ) : COLOR
 #endif
 
 	float3 coords = baseTexCoords;
+	float3 coords2 = coords;
 
-	if ( PARALLAX_MAPPING )
+#if PARALLAX_MAPPING
 	{		
 		float3 tangentspace_eye_vector = mul( worldVertToEyeVector, transpose( tangenttranspose ) );
 		
@@ -215,9 +217,18 @@ float4 main( PS_INPUT i ) : COLOR
 		float CurHeight = 1.0;
 		float NewHeight = tex2D( BumpmapSampler, coords.xy ).a;
 		float dist = min( 0.06, HEIGHT_SCALE * flParallaxLimit * ( CurHeight - NewHeight ) );
+		
+		#if BASETEXTURE2 && BUMPMAP2
+			float NewHeight2 = tex2D( BumpmapSampler, coords.xy ).a;
+			float dist2 = min( 0.06, HEIGHT_SCALE2 * flParallaxLimit * ( CurHeight - NewHeight ) );
+			coords2.x += dist2 * vOffset.x;
+			coords2.y += dist2 * vOffset.y;
+		#endif
+		
 		coords.x += dist * vOffset.x;
 		coords.y += dist * vOffset.y;
 	}
+#endif
 
 	float2 detailTexCoord = 0.0f;
 	float2 bumpmapTexCoord = 0.0f;
@@ -235,16 +246,20 @@ float4 main( PS_INPUT i ) : COLOR
 	bumpmap2TexCoord = i.ENVMAPMASKCOORDS;
 #endif
 
-	if ( PARALLAX_MAPPING )
-	{
-		detailTexCoord = 0;
-		bumpmapTexCoord = coords;
-	}
+#if PARALLAX_MAPPING
+	detailTexCoord = 0;
+	bumpmapTexCoord = coords;
+#endif
 
 	GetBaseTextureAndNormal( BaseTextureSampler, BaseTextureSampler2, BumpmapSampler,
 							 bBaseTexture2, bBumpmap || bNormalMapAlphaEnvmapMask, 
-							 coords, bumpmapTexCoord, 
+							 coords, coords2, bumpmapTexCoord, 
 							 i.vertexColor.rgb, baseColor, baseColor2, vNormal );
+
+#if PARALLAX_MAPPING && BASETEXTURE2 && BUMPMAP2
+	bumpmapTexCoord = coords2;
+	bumpmap2TexCoord = coords2;
+#endif
 
 #if BUMPMAP == 1	// not ssbump
 	vNormal.xyz = vNormal.xyz * 2.0f - 1.0f;					// make signed if we're not ssbump

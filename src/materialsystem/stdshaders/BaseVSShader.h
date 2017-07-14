@@ -147,6 +147,7 @@ public:
 			m_bWorldVertexTransition = false;
 			m_bTeeth = false;
 			m_bSSBump = false;
+			m_bParallaxMapping = false;
 			m_fSeamlessScale = 0.0;
 		}
 		bool m_bBump;
@@ -173,6 +174,9 @@ public:
 		int m_nAlphaTestReference;
 		bool m_bSSBump;
 		float m_fSeamlessScale;								// 0.0 = not seamless
+		bool m_bParallaxMapping;
+		int m_nParallaxHeightScale;
+		int m_nParallaxHeightScale2;
 	};
 	void DrawFlashlight_dx90( IMaterialVar** params, 
 		IShaderDynamicAPI *pShaderAPI, IShaderShadow* pShaderShadow, DrawFlashlight_dx90_Vars_t &vars );

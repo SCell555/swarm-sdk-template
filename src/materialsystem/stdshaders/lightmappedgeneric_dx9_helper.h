@@ -90,6 +90,7 @@ struct LightmappedGeneric_DX9_Vars_t
 
 	int m_nParallaxMap;
 	int m_nHeightScale;
+	int m_nHeightScale2;
 
 	int m_nShaderSrgbRead360;
 

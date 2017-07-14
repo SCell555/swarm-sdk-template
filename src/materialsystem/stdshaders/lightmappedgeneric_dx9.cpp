@@ -81,7 +81,8 @@ BEGIN_VS_SHADER( LightmappedGeneric,
 		SHADER_PARAM( OUTLINEEND1, SHADER_PARAM_TYPE_FLOAT, "0.0", "outer end value for outline")
 
 		SHADER_PARAM( PARALLAXMAP, SHADER_PARAM_TYPE_INTEGER, "0", "1=treat alpha of bumpmap as height" )
-		SHADER_PARAM( HEIGHT_SCALE, SHADER_PARAM_TYPE_FLOAT, "0.1", "height map scale for parallax mapping" )
+		SHADER_PARAM( HEIGHTSCALE, SHADER_PARAM_TYPE_FLOAT, "0.1", "height map scale for parallax mapping" )
+		SHADER_PARAM( HEIGHTSCALE2, SHADER_PARAM_TYPE_FLOAT, "0.1", "height map scale for parallax mapping" )
 
 		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "0", "Simulate srgb read in shader code")
 
@@ -152,8 +153,10 @@ END_SHADER_PARAMS
 		info.m_nOutlineStart1 = OUTLINESTART1;
 		info.m_nOutlineEnd0 = OUTLINEEND0;
 		info.m_nOutlineEnd1 = OUTLINEEND1;
+		
 		info.m_nParallaxMap = PARALLAXMAP;
-		info.m_nHeightScale = HEIGHT_SCALE;
+		info.m_nHeightScale = HEIGHTSCALE;
+		info.m_nHeightScale2 = HEIGHTSCALE2;
 
 		info.m_nShaderSrgbRead360 = SHADERSRGBREAD360;
 
